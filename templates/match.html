@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>My Data</title>
+</head>
+<body>
+	<table>
+		<tr>
+			<th>Field 1</th>
+			<th>Field 2</th>
+		</tr>
+		{% for row in my_data %}
+		<tr>
+			<td>{{ row.0 }}</td>
+			<td>{{ row.1 }}</td>
+		</tr>
+		{% endfor %}
+	</table>
+</body>
+</html>
