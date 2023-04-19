@@ -6,6 +6,11 @@
 </head>
 
 <body>
+  {% if data %}
+  <p>Yes they are the same</p>
+  {% elif data == False%}
+  <p>No they aren't</p>
+  {% endif %}
   <h1>Upload an Image</h1>
   <form action="/fetch/ " method="post" enctype="multipart/form-data">
     {% csrf_token%}
@@ -13,6 +18,7 @@
     <br><br>
     <button type="submit" value="Extract Text">upload</button>
   </form>
+
 </body>
 
 </html>

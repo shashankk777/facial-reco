@@ -7,13 +7,13 @@ from .forms import UserSelection
 from django.shortcuts import render
 from django.shortcuts import render
 from django.db import connection
-
+from django.core.files.storage import FileSystemStorage
 from io import BytesIO
 from django.http import HttpResponse
-
 import pytesseract
 from PIL import Image
-
+import face_recognition
+import ocr
 import io
 import cv2
 import numpy as np
@@ -180,26 +180,47 @@ def match(request):
                 cv2.imwrite(filename, img)
                 my_data.append({'filename': filename, 'img': img})
     return render(request, "match.html", {'my_data': my_data})
+import mysql.connector
 
 def fetch(request):
     if request.method == 'POST':
-        # image = request.FILES['image']
-        # img = Image.open(image)
-        # text = pytesseract.image_to_string(img)
-        print(request.FILES["image"])
-        # return render(request, 'fetch.html', {'text': text})
-    return render(request, 'fetch.html')
+        try:
+            image = request.FILES['image']
+            img = Image.open(image)
+            fs = FileSystemStorage()
+            filename = fs.save("uploads/"+image.name, image)
+            uploaded_file_url = fs.url(filename)
+            def checkIfLegit(folder_path):
+                images = []
+                for filename in os.listdir(folder_path):
+                    if filename.endswith('.jpg') or filename.endswith('.png'):
+                        img_path = os.path.join(folder_path, filename)
+                        img = face_recognition.load_image_file(img_path)
+                        images.append(img)
+                return images
+            images = checkIfLegit(BASE_DIR + "/ml/dataset/")
+            img1 = face_recognition.load_image_file(uploaded_file_url)
+            for img2 in images:
+                img1_encoding = face_recognition.face_encodings(img1)[0]
+                img2_encoding = face_recognition.face_encodings(img2)[0]
+
+                # Compare the face encodings and get a boolean value indicating if they match
+                result = face_recognition.compare_faces([img1_encoding], img2_encoding)
+
+                if result[0]:
+                    print("The two images are of the same person.")
+                    return render(request,'fetch.html',{'data':True})
+
+                else:
+                    print("The two images are of different people.")
+                    return render(request,'fetch.html',{'data':False})
+                    
+        except Exception as e:
+            print(e)
+    return render(request, 'fetch.html',{"data":"none"})
 
 def image_data_view(request):
     with connection.cursor() as cursor:
         cursor.execute('SELECT * FROM image_data')
         rows = cursor.fetchall()
-    
-    img_bytes = rows[0][-1]
-    img = Image.open(BytesIO(img_bytes))
-    img_rgb = img.convert('RGB')
-    img_bytes_io = BytesIO()
-    img_rgb.save(img_bytes_io, format='JPEG')
-    img_bytes = img_bytes_io.getvalue()
-
-    return HttpResponse(rows, content_type='text/html')
+    return render(request, 'image_data.html', {'rows': rows})

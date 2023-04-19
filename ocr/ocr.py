@@ -4,7 +4,6 @@ from PIL import Image
 import pytesseract
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
-
 # Connect to the database
 db = mysql.connector.connect(
     host="localhost",
@@ -39,8 +38,8 @@ with open('photo.jpg', 'rb') as f:
     photo = f.read()
 
 # Insert the extracted data into the table
-sql = "INSERT INTO image_data (pan, name, father_name, dob, gender, photograph) VALUES (%s, %s, %s, %s, %s, %s)"
-val = (pan, name, father_name, dob, gender, photo)
+sql = "INSERT INTO image_data (pan, name, father_name, dob, gender) VALUES (%s, %s, %s, %s, %s)"
+val = (pan, name, father_name, dob, gender)
 cursor.execute(sql, val)
 db.commit()
 
