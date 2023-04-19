@@ -24,8 +24,8 @@ from . import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('match/', match, name="match"),
-    url('fetch/', fetch, name='fetch'),
-    path('image-data/', views.image_data_view, name='image_data'),
+    path('fetch/', fetch, name='fetch'),
+    path('image-data/', image_data_view, name='image_data'),
     url(r'^$', index),
     url(r'^create_dataset$', create_dataset),
     url(r'^detect$', detect),

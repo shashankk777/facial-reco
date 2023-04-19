@@ -8,10 +8,16 @@ from django.shortcuts import render
 from django.shortcuts import render
 from django.db import connection
 
+from io import BytesIO
+from django.http import HttpResponse
+
+import pytesseract
+from PIL import Image
+
+import io
 import cv2
 import numpy as np
 import os
-from PIL import Image
 
 BASE_DIR = getattr(settings, 'BASE_DIR')
 
@@ -43,7 +49,7 @@ def create_dataset(request):
                     count += 1
                     # Save the captured image into the datasets folder
                     cv2.imwrite(BASE_DIR+"/ml/dataset/User." + str(face_id) + '.' +
-                                str(count) + ".jpg", gray[y:y + h, x:x + w])
+                                str(count) + ".jpg", img[y:y + h, x:x + w])
                     cv2.waitKey(250)
 
                 cv2.imshow('Face', img)
@@ -109,7 +115,7 @@ def detect(request):
             # Printing that number below the face
             # @Prams cam image, id, location,font style, color, stroke
 
-        cv2.imshow("Face", img)
+        cv2.imshow("Face", cv2.cvtColor(img, cv2.COLOR_BGR2RGB))  # convert BGR to RGB for display
         if (cv2.waitKey(1) == ord('q')):
             break
         #elif (userId != 0):
@@ -132,94 +138,68 @@ def trainer(request):
         for this python has a library called os
     '''
 
-
     # Path for face image database
     path = BASE_DIR + '/ml/dataset'
     recognizer = cv2.face.LBPHFaceRecognizer_create()
-    detector = cv2.CascadeClassifier(BASE_DIR+"/ml/haarcascade_frontalface_default.xml");  # function to get the images and label data
+    detector = cv2.CascadeClassifier(BASE_DIR+"/ml/haarcascade_frontalface_default.xml")
 
     def getImagesAndLabels(path):
         imagePaths = [os.path.join(path, f) for f in os.listdir(path)]
         faceSamples = []
         ids = []
         for imagePath in imagePaths:
-            PIL_img = Image.open(imagePath).convert('L')  # grayscale
+            PIL_img = Image.open(imagePath)  # color
             img_numpy = np.array(PIL_img, 'uint8')
             id = int(os.path.split(imagePath)[-1].split(".")[1])
-            #faces = detector.detectMultiScale(img_numpy)
-            #for (x, y, w, h) in faces:
-            #    faceSamples.append(img_numpy[y:y + h, x:x + w])
-            #    ids.append(id)
             faceSamples.append(img_numpy)
             ids.append(id)
             # print ID
             cv2.imshow("training", img_numpy)
             cv2.waitKey(10)
         return np.array(faceSamples), np.array(ids)
-        #return faceSamples, ids
 
     print("[INFO] Training faces. It will take a few seconds. Wait ...")
-
     faces, ids = getImagesAndLabels(path)
-    recognizer.train(faces, ids)  # Save the model into trainer/trainer.yml
-    recognizer.save(BASE_DIR+'/ml/recognizer/trainer.yml')  # Print the numer of faces trained and end program
+    recognizer.train(faces, ids)
+    recognizer.save(BASE_DIR+'/ml/recognizer/trainer.yml')
     print("[INFO] {0} faces trained. Exiting Program".format(len(np.unique(ids))))
     cv2.destroyAllWindows()
-    messages.success(request, "{0} faces trained successfully".format(len(np.unique(ids))) )
-
+    messages.success(request, "{0} faces trained successfully".format(len(np.unique(ids))))
     return redirect('/')
+
 
 def match(request):
     with connections['default'].cursor() as cursor:
         cursor.execute('SELECT photograph FROM aadhaar_details')
+        my_data = []
         for row in cursor:
             if row[0] is not None:
-                nparr = np.frombuffer(row[0],np.uint8)
-                img = cv2.imdecode(nparr, cv2.IMREAD_UNCHANGED)
+                nparr = np.frombuffer(row[0], np.uint8)
+                img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)  # decode as a colored image
                 filename = 'image_' + str(cursor.rowcount) + '.png'
-                cv2.imwrite( filename, img)
-        mydata = cursor.fetchall()
-
-    return render(request, "match.html",{'my_data':mydata })
-
-
-
-import pytesseract
-from PIL import Image
+                cv2.imwrite(filename, img)
+                my_data.append({'filename': filename, 'img': img})
+    return render(request, "match.html", {'my_data': my_data})
 
 def fetch(request):
     if request.method == 'POST':
-        image = request.FILES['image']
-        img = Image.open(image)
-        text = pytesseract.image_to_string(img)
-        return render(request, 'fetch.html', {'text': text})
+        # image = request.FILES['image']
+        # img = Image.open(image)
+        # text = pytesseract.image_to_string(img)
+        print(request.FILES["image"])
+        # return render(request, 'fetch.html', {'text': text})
     return render(request, 'fetch.html')
-
 
 def image_data_view(request):
     with connection.cursor() as cursor:
         cursor.execute('SELECT * FROM image_data')
         rows = cursor.fetchall()
-    # print(rows, 'asidasviudasbiouasbiudbasyibdiusab')
-    return render(request, 'image_data.html', {'rows': rows})
+    
+    img_bytes = rows[0][-1]
+    img = Image.open(BytesIO(img_bytes))
+    img_rgb = img.convert('RGB')
+    img_bytes_io = BytesIO()
+    img_rgb.save(img_bytes_io, format='JPEG')
+    img_bytes = img_bytes_io.getvalue()
 
-from io import BytesIO
-from PIL import Image
-
-def convert_image(image_data):
-    # Create a BytesIO object from the image data
-    stream = BytesIO(image_data)
-    
-    # Open the image using PIL
-    pil_image = Image.open(stream)
-    
-    # Convert the image to a JPEG format
-    pil_image = pil_image.convert('RGB')
-    jpeg_image = BytesIO()
-    pil_image.save(jpeg_image, format='JPEG')
-    
-    # Save the image to a file and return the path
-    image_path = '../images/image.jpg'
-    with open(image_path, 'wb') as f:
-        f.write(jpeg_image.getvalue())
-    return image_path
+    return HttpResponse(rows, content_type='text/html')
