@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Image Text Extractor</title>
+</head>
+
+<body>
+  <h1>Image Text Extractor</h1>
+
+  <form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    <input type="file" name="image_file">
+    <input type="submit" value="Extract Text">
+  </form>
+
+  {% if text %}
+  <h2>Extracted Text:</h2>
+  <p>{{ text }}</p>
+  {% endif %}
+
+  <form method="POST" action="{% url 'faceRecon:match' %}">
+    {% csrf_token %}
+    <input type="submit" value="Face Recognization">
+  </form>
+
+  <form method="POST" action="{% url 'faceRecon:create_dataset' %}">
+    {% csrf_token %}
+    <input type="submit" value="Add New Person">
+  </form>
+
+  <form method="POST" action="{% url 'faceRecon:detect' %}">
+    {% csrf_token %}
+    <input type="submit" value="Detect Faces">
+  </form>
+
+  <h2>Fetched Text:</h2>
+  <p id="fetched-text"></p>
+  <button onclick="fetchText()">Display Text</button>
+
+  <script>
+    function fetchText() {
+      fetch('/fetch/')
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('fetched-text').innerText = data;
+        });
+    }
+  </script>
+
+</body>
+
+</html>

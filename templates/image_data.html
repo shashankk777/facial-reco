@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Image Data</title>
+</head>
+
+<body>
+    <table>
+        <thead>
+            <tr>
+                <th>PAN</th>
+                <th>Name</th>
+                <th>Father's Name</th>
+                <th>DOB</th>
+                <th>Gender</th>
+                <th>Photograph</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr>
+                <td>{{ row.1 }}</td>
+                <td>{{ row.2 }}</td>
+                <td>{{ row.3 }}</td>
+                <td>{{ row.4 }}</td>
+                <td>{{ row.5 }}</td>
+                <td><img src="images/image.jpeg" alt="Image"></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+
+</html>

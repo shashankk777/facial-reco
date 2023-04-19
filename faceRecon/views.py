@@ -4,6 +4,9 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.db import connections
 from .forms import UserSelection
+from django.shortcuts import render
+from django.shortcuts import render
+from django.db import connection
 
 import cv2
 import numpy as np
@@ -176,5 +179,47 @@ def match(request):
                 filename = 'image_' + str(cursor.rowcount) + '.png'
                 cv2.imwrite( filename, img)
         mydata = cursor.fetchall()
-    
+
     return render(request, "match.html",{'my_data':mydata })
+
+
+
+import pytesseract
+from PIL import Image
+
+def fetch(request):
+    if request.method == 'POST':
+        image = request.FILES['image']
+        img = Image.open(image)
+        text = pytesseract.image_to_string(img)
+        return render(request, 'fetch.html', {'text': text})
+    return render(request, 'fetch.html')
+
+
+def image_data_view(request):
+    with connection.cursor() as cursor:
+        cursor.execute('SELECT * FROM image_data')
+        rows = cursor.fetchall()
+    # print(rows, 'asidasviudasbiouasbiudbasyibdiusab')
+    return render(request, 'image_data.html', {'rows': rows})
+
+from io import BytesIO
+from PIL import Image
+
+def convert_image(image_data):
+    # Create a BytesIO object from the image data
+    stream = BytesIO(image_data)
+    
+    # Open the image using PIL
+    pil_image = Image.open(stream)
+    
+    # Convert the image to a JPEG format
+    pil_image = pil_image.convert('RGB')
+    jpeg_image = BytesIO()
+    pil_image.save(jpeg_image, format='JPEG')
+    
+    # Save the image to a file and return the path
+    image_path = '../images/image.jpg'
+    with open(image_path, 'wb') as f:
+        f.write(jpeg_image.getvalue())
+    return image_path
